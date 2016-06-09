@@ -1,3 +1,3 @@
-pyrovio
+Pyrovio
 =======================
-Python code to interface with the Wowwee Rovio robotic webcam.
+Using PyRovio API to do vision-based autonomous navigation 
