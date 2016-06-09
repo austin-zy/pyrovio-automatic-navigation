@@ -89,7 +89,7 @@ class rovioControl(object):
         return h-y
 
     def main(self):
-        self.rovio.head_middle()
+        # self.rovio.head_middle()
         frame = self.rovio.camera.get_frame()
         if not isinstance(frame, np.ndarray):
             return
