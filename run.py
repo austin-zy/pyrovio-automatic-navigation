@@ -1,6 +1,8 @@
 from lib import Rovio
 import cv2
 import numpy as np
+import winsound, sys
+
 from skimage import filter, img_as_ubyte
 
 
@@ -37,33 +39,65 @@ class rovioControl(object):
         frame = cv2.resize(frame, size)
         return frame
 
+    def face_detection(self):
+        # Stop Rovio so that it can stop down to recognize
+        self.rovio.stop()
+        self.rovio.head_up()
+        flag = False
+
+        frame = self.rovio.camera.get_frame()
+        face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+
+        for (x, y, w, h) in faces:
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        cv2.imshow("Face detector",frame)
+
+        if faces == ():
+            pass
+        else:
+            flag = True
+            winsound.PlaySound('%s.wav' % 'humandetected', winsound.SND_FILENAME)
+        return flag
+
+
     def floor_finder(self):
         frame = self.rovio.camera.get_frame()
         # Covert to Grayscale
-        frame = cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)
+        # imgray = cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)
         # Turn image to black and white with thresholding
-        ret, thresh1 = cv2.threshold(frame,120,255,cv2.THRESH_BINARY)
+        gaussian = cv2.GaussianBlur(frame,(5,5),0)
+        edges = cv2.Canny(gaussian,100,200)
+        #ret, thresh1 = cv2.threshold(imgray,50,255,cv2.THRESH_BINARY)
         # Laplacian operator
-        laplacian = cv2.Laplacian(thresh1, cv2.CV_32F)
+        # laplacian = cv2.Laplacian(thresh1, cv2.CV_32F)
         ##############################
         # Make the line more obvious #
         ##############################
         # Kernel
-        kernel = np.ones((11, 11), np.uint8)
-        dilate = cv2.dilate(laplacian, kernel, iterations=1)
+        kernel = np.ones((2, 2), np.uint8)
+        dilate = cv2.dilate(edges, kernel, iterations=1)
         # Perform matrix function
         im = np.asarray(dilate)
         h= np.size(im, 0)
         w= np.size(im, 1)
         y = 0
-        for i in range(h):
-            if np.mean(im[i])>500:
-                y = i
-        cv2.rectangle(frame,(0,y),(w,h),(245,252,0),2)
+        # for i in range(h):
+        #     if np.mean(im[i])>400:
+        #         y = i
+        line = []
+        for j in range(h-1,0,-1):
+            for i in range(w):
+                if not im[j][i] == 0:
+                    y = j
+                    break
+            cv2.rectangle(frame,(0,y),(w,h),(245,252,0),2)
         cv2.imshow("FloorFinder", frame)
         return h-y
 
     def main(self):
+        self.rovio.head_middle()
         frame = self.rovio.camera.get_frame()
         if not isinstance(frame, np.ndarray):
             return
@@ -78,14 +112,16 @@ class rovioControl(object):
 
         cv2.imshow("rovio", frame)
 
-        if self.floor_finder()<500:
-            self.rovio.forward(speed=1)
-            print self.floor_finder()
-        elif self.floor_finder()==0:
-            self.rovio.turn_around()
+        if self.floor_finder() > 50:
+            if (not self.rovio.ir()):
+                self.rovio.api.set_ir(1)
+            if (not self.rovio.obstacle()):
+                self.rovio.forward(speed=1)
+            else:
+                self.rovio.rotate_right(angle=20, speed=2)
         else:
-            print self.floor_finder()
             self.rovio.rotate_right(angle=20, speed=2)
+
 
         self.key = cv2.waitKey(20)
         if self.key > 0:
@@ -111,6 +147,12 @@ class rovioControl(object):
             self.rovio.head_middle()
         elif self.key == 47:  # slash
             self.rovio.head_up()
+        elif self.key == 32:  # Space Bar
+            flag = False
+            self.rovio.stop()
+            while not flag:
+                flag = self.face_detection()
+                print flag
 
 if __name__ == "__main__":
     url = '192.168.10.18'

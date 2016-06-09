@@ -198,7 +198,7 @@ class Rovio:
         return self.api.manual_drive(13)
 
     # IR sensing
-    def obstacal(self):
+    def obstacle(self):
         """Returns True if IR detects obstacal, if ir is off returns false."""
         return self.isflag(2)
 
@@ -232,7 +232,7 @@ class Rovio:
         """Move forwards until a wall is encoutored"""
         if ( not self.ir() ):
             self.api.set_ir( 1 )
-        while ( not self.obstacal() ):
+        while ( not self.obstacle() ):
             self.forward(speed)
         self.stop()
 
