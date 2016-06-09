@@ -1,7 +1,7 @@
 from lib import Rovio
 import cv2
 import numpy as np
-import winsound, sys
+import winsound, sys, time
 
 from skimage import filter, img_as_ubyte
 
@@ -52,7 +52,7 @@ class rovioControl(object):
 
         for (x, y, w, h) in faces:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-        cv2.imshow("Face detector",frame)
+        cv2.imshow(frame)
 
         if faces == ():
             pass
@@ -64,14 +64,9 @@ class rovioControl(object):
 
     def floor_finder(self):
         frame = self.rovio.camera.get_frame()
-        # Covert to Grayscale
-        # imgray = cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)
-        # Turn image to black and white with thresholding
-        gaussian = cv2.GaussianBlur(frame,(5,5),0)
+        im_gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        gaussian = cv2.GaussianBlur(im_gray,(5,5),0)
         edges = cv2.Canny(gaussian,100,200)
-        #ret, thresh1 = cv2.threshold(imgray,50,255,cv2.THRESH_BINARY)
-        # Laplacian operator
-        # laplacian = cv2.Laplacian(thresh1, cv2.CV_32F)
         ##############################
         # Make the line more obvious #
         ##############################
@@ -83,9 +78,6 @@ class rovioControl(object):
         h= np.size(im, 0)
         w= np.size(im, 1)
         y = 0
-        # for i in range(h):
-        #     if np.mean(im[i])>400:
-        #         y = i
         line = []
         for j in range(h-1,0,-1):
             for i in range(w):
@@ -110,13 +102,11 @@ class rovioControl(object):
 
         frame = self.show_battery(frame)
 
-        cv2.imshow("rovio", frame)
-
         if self.floor_finder() > 50:
             if (not self.rovio.ir()):
                 self.rovio.api.set_ir(1)
             if (not self.rovio.obstacle()):
-                self.rovio.forward(speed=1)
+                self.rovio.forward(speed=7)
             else:
                 self.rovio.rotate_right(angle=20, speed=2)
         else:
@@ -147,6 +137,7 @@ class rovioControl(object):
             self.rovio.head_middle()
         elif self.key == 47:  # slash
             self.rovio.head_up()
+
         elif self.key == 32:  # Space Bar
             flag = False
             self.rovio.stop()
@@ -162,4 +153,5 @@ if __name__ == "__main__":
 while True:
     app.main()
     if app.key == 27:
+        app.rovio.head_down()
         break
